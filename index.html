@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleStream - Multi-Server Player</title>
+    <style>
+        /* --- CSS STYLES --- */
+        :root {
+            --bg-color: #141414;
+            --card-bg: #222;
+            --text-color: #fff;
+            --primary-color: #e50914; 
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        /* Header & Search Bar */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            background-color: #000;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        header h1 {
+            color: var(--primary-color);
+            cursor: pointer;
+        }
+
+        header input {
+            padding: 10px 15px;
+            border-radius: 20px;
+            border: none;
+            outline: none;
+            width: 300px;
+            background-color: #333;
+            color: white;
+            font-size: 16px;
+        }
+
+        /* Movie Grid */
+        main { padding: 30px 40px; }
+        h2 { margin-bottom: 20px; font-weight: 300; }
+
+        .movie-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+        }
+
+        .movie-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .movie-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px var(--primary-color);
+        }
+
+        .movie-card img {
+            width: 100%;
+            aspect-ratio: 2/3;
+            object-fit: cover;
+        }
+
+        .movie-info { padding: 10px; }
+        .movie-info h3 { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px; }
+        .movie-info p { font-size: 12px; color: #aaa; }
+
+        /* Player Modal & Server Switcher */
+        .modal {
+            display: none; 
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            width: 100%;
+            max-width: 1000px;
+            position: relative;
+            background: #111;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .close-btn {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            background: var(--primary-color);
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+        }
+
+        .close-btn:hover { background: #b20710; }
+
+        /* Server Buttons */
+        .server-list {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .server-btn {
+            padding: 8px 12px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+
+        .server-btn.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .server-btn:hover:not(.active) { background: #555; }
+
+        /* Video Iframe */
+        .iframe-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            background: #000;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .iframe-container iframe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border: none;
+        }
+
+        @media (max-width: 600px) {
+            header { flex-direction: column; gap: 15px; padding: 15px; }
+            header input { width: 100%; }
+            main { padding: 15px; }
+            .modal-content { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- --- HTML STRUCTURE --- -->
+    <header>
+        <h1 onclick="getTrendingMovies()">SimpleStream</h1>
+        <input type="text" id="search" placeholder="Search for a movie (Press Enter)..." onkeyup="handleSearch(event)">
+    </header>
+
+    <main>
+        <h2 id="section-title">Trending Movies</h2>
+        <div class="movie-grid" id="movie-grid"></div>
+    </main>
+
+    <!-- Video Player Modal -->
+    <div class="modal" id="player-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="movie-title-display">Movie Title</h3>
+                <button class="close-btn" onclick="closeModal()">&times; Close</button>
+            </div>
+            
+            <!-- Server Switcher Container -->
+            <div class="server-list" id="server-list"></div>
+
+            <div class="iframe-container">
+                <!-- Video player iframe -->
+                <iframe id="video-frame" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- --- JAVASCRIPT --- -->
+    <script>
+        // API Configuration
+        const API_KEY = '493d138156697ffeb0e02bc492f5136f';
+        const BASE_URL = 'https://api.themoviedb.org/3';
+        const IMG_URL = 'https://image.tmdb.org/t/p/w500';
+
+        // Array of different streaming servers. If one fails, the user can click another.
+        const PLAYERS = [
+            { name: "Server 1 (Vidstorm)", url: (id) => `https://vidstorm.ru/movie/${id}?autoplay=true` },
+            { name: "Server 2 (Vidify)", url: (id) => `https://player.vidify.top/embed/movie/${id}` },
+            { name: "Server 3 (VidPlus)", url: (id) => `https://player.vidplus.to/embed/movie/${id}` },
+            { name: "Server 4 (AutoEmbed)", url: (id) => `https://player.autoembed.app/embed/movie/${id}` },
+            { name: "Server 5 (VidSrc PRO)", url: (id) => `https://vidsrc.pro/embed/movie/${id}` },
+            { name: "Server 6 (SuperEmbed)", url: (id) => `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1` }
+        ];
+
+        const grid = document.getElementById('movie-grid');
+        const sectionTitle = document.getElementById('section-title');
+        const modal = document.getElementById('player-modal');
+        const iframe = document.getElementById('video-frame');
+        const titleDisplay = document.getElementById('movie-title-display');
+        
+        let currentMovieId = null;
+
+        // Fetch Trending Movies
+        async function getTrendingMovies() {
+            sectionTitle.innerText = "Trending Movies";
+            grid.innerHTML = "<p>Loading...</p>";
+            document.getElementById('search').value = ""; 
+            try {
+                const res = await fetch(`${BASE_URL}/trending/movie/week?api_key=${API_KEY}`);
+                const data = await res.json();
+                displayMovies(data.results);
+            } catch (error) {
+                grid.innerHTML = "<p>Failed to load movies. Check connection.</p>";
+            }
+        }
+
+        // Search Movies
+        async function searchMovies(query) {
+            sectionTitle.innerText = `Search Results for "${query}"`;
+            grid.innerHTML = "<p>Searching...</p>";
+            try {
+                const res = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&query=${query}`);
+                const data = await res.json();
+                if(data.results.length === 0) {
+                    grid.innerHTML = "<p>No movies found.</p>";
+                } else {
+                    displayMovies(data.results);
+                }
+            } catch (error) {
+                grid.innerHTML = "<p>Search failed.</p>";
+            }
+        }
+
+        function handleSearch(event) {
+            const query = event.target.value.trim();
+            if (event.key === 'Enter') {
+                if (query) searchMovies(query);
+                else getTrendingMovies();
+            }
+        }
+
+        // Render Movies
+        function displayMovies(movies) {
+            grid.innerHTML = ""; 
+            movies.forEach(movie => {
+                if (!movie.poster_path) return; // Skip movies without images
+                const card = document.createElement('div');
+                card.className = 'movie-card';
+                card.onclick = () => watchMovie(movie.id, movie.title); // Pass ID and Title
+
+                card.innerHTML = `
+                    <img src="${IMG_URL + movie.poster_path}" alt="${movie.title}">
+                    <div class="movie-info">
+                        <h3>${movie.title}</h3>
+                        <p>⭐ ${movie.vote_average.toFixed(1)} | 📅 ${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Open Player Modal & Generate Server Buttons
+        function watchMovie(movieId, movieTitle) {
+            currentMovieId = movieId;
+            titleDisplay.innerText = movieTitle;
+            modal.classList.add('active');
+            document.body.style.overflow = "hidden"; // Stop background scroll
+
+            renderServerButtons();
+            changeServer(0); // Auto-play the first server in the list
+        }
+
+        // Create buttons for every server in the PLAYERS array
+        function renderServerButtons() {
+            const serverList = document.getElementById('server-list');
+            serverList.innerHTML = ''; // Clear old buttons
+            
+            PLAYERS.forEach((server, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'server-btn';
+                btn.innerText = server.name;
+                btn.onclick = () => changeServer(index);
+                serverList.appendChild(btn);
+            });
+        }
+
+        // Change iframe source based on clicked server
+        function changeServer(index) {
+            const btns = document.querySelectorAll('.server-btn');
+            
+            // Remove 'active' class from all buttons, add to the clicked one
+            btns.forEach(btn => btn.classList.remove('active'));
+            btns[index].classList.add('active');
+            
+            // Set the iframe URL to the chosen server
+            iframe.src = PLAYERS[index].url(currentMovieId);
+        }
+
+        // Close Player Modal
+        function closeModal() {
+            modal.classList.remove('active');
+            iframe.src = ""; // Kill video stream to stop background audio
+            document.body.style.overflow = "auto";
+        }
+
+        // Close modal on 'Escape' key or clicking outside the box
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'player-modal') closeModal();
+        });
+
+        // Initialize App
+        getTrendingMovies();
+    </script>
+</body>
+</html>
