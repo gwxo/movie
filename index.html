@@ -10954,7 +10954,7 @@ async function loadHomeContent() {
       navigateTo('details', false);
       
       try {
-        const details = await fetchTMDB(`/${type}/${id}`, { append_to_response: 'videos,credits' });
+        const details = await fetchTMDB(`/${type}/${id}`, { append_to_response: 'videos,credits,external_ids' });
         
         if (!details || details.success === false) {
           throw new Error('Content not found');
@@ -11208,10 +11208,24 @@ topTag.innerHTML = `
     }
 
     // ==================== PLAYER ====================
-    const PLAYERS = [
+    
+      const PLAYERS = [
   {
-    name: "Server 1 → Vidstorm 🔥",
-    url: (id, type, s=1, e=1) => {
+    name: "Server 1 → Super Player 🔥",
+    url: (id, type, s=1, e=1, imdbId=null) => {
+      // It will use the IMDb ID (ttXXXXXXX) if available, otherwise it tries TMDB ID
+      const targetId = imdbId || id;
+      if(type === "movie") {
+        return `https://piexe411qok.com/play/${targetId}`;
+      } else {
+        // TV Show format for piexe (using standard query params)
+        return `https://piexe411qok.com/play/${targetId}?s=${s}&e=${e}`;
+      }
+    }
+  },
+  {
+    name: "Server 2 → Vidstorm ⚡",
+    url: (id, type, s=1, e=1, imdbId=null) => {
       if(type === "movie") {
         return `https://vidstorm.ru/movie/${id}?autoplay=true&theme=ffffff&download=true&lang=en`;
       } else {
@@ -11219,10 +11233,9 @@ topTag.innerHTML = `
       }
     }
   },
-
   {
-    name: "Server 2 → Vidify 🎨",
-    url: (id, type, s=1, e=1) => {
+    name: "Server 3 → Vidify 🎨",
+    url: (id, type, s=1, e=1, imdbId=null) => {
       if(type === "movie") {
         return `https://player.vidify.top/embed/movie/${id}?autoplay=true&poster=true&servericon=true&setting=true&pip=true&download=true&primarycolor=4d00c9&secondarycolor=1f2937&iconcolor=ffffff`;
       } else {
@@ -11230,32 +11243,20 @@ topTag.innerHTML = `
       }
     }
   },
-
   {
-    name: "Server 3 → VidPlus ⚡",
-    url: (id, type, s=1, e=1) => {
+    name: "Server 4 → VidPlus 🚀",
+    url: (id, type, s=1, e=1, imdbId=null) => {
       if(type === "movie") {
         return `https://player.vidplus.to/embed/movie/${id}?autoplay=true&poster=true&title=true&download=true&chromecast=true&servericon=true&setting=true&pip=true&primarycolor=7800F0&secondarycolor=9F9BFF&iconcolor=FFFFFF&font=Playfair+Display&fontcolor=FFFFFF&fontsize=20&opacity=0.5`;
       } else {
         return `https://player.vidplus.to/embed/tv/${id}/${s}/${e}?autoplay=true&autonext=true&nextbutton=true&poster=true&title=true&download=true&chromecast=true&episodelist=true&servericon=true&setting=true&pip=true&primarycolor=7800F0&secondarycolor=9F9BFF&iconcolor=FFFFFF&font=Playfair+Display&fontcolor=FFFFFF&fontsize=20&opacity=0.5`;
       }
     }
-  },
-
-  {
-    name: "Server 4 → AutoEmbed ⚠️",
-    url: (id, type, s=1, e=1) => {
-      if(type === "movie") {
-        return `https://player.autoembed.app/embed/movie/${id}`;
-      } else {
-        return `https://player.autoembed.app/embed/tv/${id}/${s}/${e}`;
-      }
-    }
   }
 ];
 
 
-function playItem(id, type) {
+async function playItem(id, type) {
   const videoBox = document.getElementById("detailsVideo");
   const iframe = document.getElementById("inlinePlayer");
   const serverList = document.getElementById("serverList");
@@ -11264,8 +11265,25 @@ function playItem(id, type) {
   iframe.src = "";
   videoBox.classList.add("playing");
   banner?.classList.add("player-active");
+  
+  // Show a loading text while we grab the IMDb ID
+  serverList.innerHTML = "<span style='color:var(--text-muted); font-size:12px; padding:10px;'><i class='fas fa-spinner fa-spin'></i> Loading Secure Servers...</span>";
+
+  // 1. Fetch the IMDb ID if we don't have it yet
+  let imdbId = state.currentDetails?.external_ids?.imdb_id;
+  if (!imdbId || state.currentDetails?.id !== id) {
+    try {
+      const extData = await fetchTMDB(`/${type}/${id}/external_ids`);
+      imdbId = extData?.imdb_id || null;
+    } catch(e) { 
+      console.error("Failed to fetch IMDb ID"); 
+    }
+  }
+
+  // Clear loading text
   serverList.innerHTML = "";
 
+  // 2. Continue watching logic
   upsertContinueWatching(state.currentDetails || { id, title: state.currentDetails?.title || state.currentDetails?.name || 'Untitled' }, type, {
     season: type === 'tv' ? state.selectedSeason : null,
     episode: type === 'tv' ? state.selectedEpisode : null,
@@ -11281,23 +11299,8 @@ function playItem(id, type) {
 
     state.currentServerIndex = index;
 
-    let url;
-
-    if (
-  server.name.includes("Server 1") ||
-  server.name.includes("Server 2") ||
-  server.name.includes("Server 3") ||
-  server.name.includes("Server 4")
-) {
-      url = server.url(
-        id,
-        type,
-        state.selectedSeason,
-        state.selectedEpisode
-      );
-    } else {
-      url = server.url(id, type);
-    }
+    // Pass the imdbId to the server URL generator
+    const url = server.url(id, type, state.selectedSeason, state.selectedEpisode, imdbId);
 
     iframe.src = url;
 
@@ -11313,16 +11316,16 @@ function playItem(id, type) {
     const btn = document.createElement("button");
     btn.innerText = server.name;
     btn.id = "server-" + index;
-
     btn.onclick = () => loadServer(index);
-
     serverList.appendChild(btn);
   });
 
   const initialIndex = Number.isInteger(state.currentServerIndex) ? state.currentServerIndex : 0;
   loadServer(initialIndex);
 }
+  
 
+    
 
 
     // ==================== COMMUNITY / REACTION / RATING ====================
