@@ -11114,6 +11114,12 @@ topTag.innerHTML = `
       document.getElementById('detailsInfo').innerHTML = `
         <h1 class="details-title">${title}</h1>
 
+<!-- SERVER NOTICE ALERT -->
+        <div style="font-size: 12px; color: var(--text-secondary); margin: 16px 0 8px; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 8px; border-left: 3px solid var(--primary);">
+          <i class="fas fa-info-circle" style="color: var(--primary); font-size: 14px;"></i>
+          <span><strong>Note:</strong> Try different servers for better streaming quality.</span>
+        </div>
+    
 <div id="serverList" style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;"></div>
         <div class="details-meta">
           <div class="details-rating"><i class="fas fa-star"></i> <span>${rating}</span></div>
