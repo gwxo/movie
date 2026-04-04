@@ -6020,9 +6020,21 @@ body.white-mode .notif-item.unread { background: rgba(229,9,20,0.04); }
 </style>
 
 <style id="sb_cln_style">ins[class*="adsbygoogle"],ins[class*="adsbyadop"],[id*="div-gpt-ad"],amp-ad{display:none !important;}</style><style id="sb_dark_style">img{-webkit-filter:brightness(70%);}</style></head>
-<body class="sidebar-open">
+<body class="sidebar-open no-scroll">
+
+  <!-- ===== CINEMATIC PRELOADER ===== -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="glass-content">
+      <h1 class="main-bolt-logo">PRASXMOVIE</h1>
+      <div class="cinepeace-tag">PREMIUM STREAMING</div>
+      <div class="bolt-progress-container">
+        <div class="bolt-progress-fill"></div>
+      </div>
+    </div>
+  </div>
+  <!-- ================================= -->
+
   <div class="hpl-bar"></div>
-  
   
 
 
@@ -12127,11 +12139,15 @@ if (location.hash) {
   navigateTo('home', false);
 }
       
+      // Cinematic Preloader Fade Out
       setTimeout(() => {
-        document.getElementById('loadingOverlay').classList.add('hide');
-        
-        document.body.classList.remove('no-scroll');
-      }, 500);
+        const loader = document.getElementById('loadingOverlay');
+        if (loader) {
+          loader.classList.add('fade-out'); // triggers your CSS fade animation
+          setTimeout(() => loader.remove(), 450); // removes it from HTML after fade
+        }
+        document.body.classList.remove('no-scroll'); // Allows user to scroll again
+      }, 1500); // 1.5 seconds gives enough time to see the cool animation
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -13580,28 +13596,4 @@ document.addEventListener('DOMContentLoaded', function() {
       ? originalPlayCurrentDetailServer.call(this)
       : undefined;
   };
-</script>
-<script>
-(() => {
-  const hideLoader = () => {
-    const loader = document.getElementById('loadingOverlay');
-    if (!loader) return;
-
-    loader.classList.add('fade-out');
-
-    setTimeout(() => {
-      loader.remove();
-    }, 750);
-  };
-
-  const startTimer = () => {
-    setTimeout(hideLoader, 1000); // 1 second after page open
-  };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startTimer, { once: true });
-  } else {
-    startTimer();
-  }
-})();
 </script>
