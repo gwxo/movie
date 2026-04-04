@@ -1,5 +1,11 @@
 
   <head>
+    <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#e50914">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PRASXMOVIE">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=5.0,user-scalable=yes">
 
@@ -8,6 +14,99 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
+/* ==================== PWA INSTALL POPUP ==================== */
+.pwa-popup {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-elevated, #1a1a1a);
+  border-top: 1px solid var(--border-color, #333);
+  padding: 20px;
+  z-index: 100000;
+  transform: translateY(120%);
+  transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1); /* Smooth slide up */
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -10px 50px rgba(0, 0, 0, 0.7);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.pwa-popup.show {
+  transform: translateY(0);
+}
+
+body.white-mode .pwa-popup {
+  background: #ffffff;
+  border-color: #e5e7eb;
+  box-shadow: 0 -10px 50px rgba(0, 0, 0, 0.1);
+}
+
+.pwa-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pwa-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  object-fit: cover;
+  box-shadow: 0 4px 15px rgba(229, 9, 20, 0.3);
+}
+
+.pwa-text h4 {
+  font-size: 18px;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+.pwa-text p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.pwa-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.pwa-btn {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  font-size: 14px;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.pwa-btn:active {
+  transform: scale(0.96);
+}
+
+.pwa-btn-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+body.white-mode .pwa-btn-cancel {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.pwa-btn-install {
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(229, 9, 20, 0.3);
+}
+    
     :root {
       --primary: #e50914;
       --primary-hover: #f40612;
@@ -4867,6 +4966,8 @@
     }
 </style>
 
+
+    
   <style id="cinepeace-final-fixes">
     /* ===== FINAL UI FIXES ===== */
     .header-avatar {
@@ -13599,3 +13700,97 @@ document.addEventListener('DOMContentLoaded', function() {
       : undefined;
   };
 </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then((registration) => {
+            console.log('PWA ServiceWorker registered successfully!');
+          })
+          .catch((error) => {
+            console.log('ServiceWorker registration failed:', error);
+          });
+      });
+    }
+  </script>
+  <!-- PWA Install Popup -->
+  <div id="pwaInstallPopup" class="pwa-popup">
+    <div class="pwa-content">
+      <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjTEJbe6lip4NTxh5kF2ykdjKbdoF2zYLVcjVLpzD1pwoldn4ZHSAJYZXCqma36aDiM5yHmbmklMUvnDdd0mLuZG1CSvLR0Kzqixz9_54HqE3S8h3qClaRzhVAXLsiTpiDh8j91Il9HTJtyZvDRFMvhLShT-F0QLNogv64ogea4cHDfO36LWLGsTyTPKQiW/s918/IMG_0561.png" class="pwa-logo" alt="PRASXMOVIE Logo">
+      <div class="pwa-text">
+        <h4>Install PRASXMOVIE</h4>
+        <p>Add our app to your home screen for full-screen streaming, offline access, and a faster experience.</p>
+      </div>
+    </div>
+    <div class="pwa-actions">
+      <button class="pwa-btn pwa-btn-cancel" onclick="closePwaPopup()">Not Now</button>
+      <button class="pwa-btn pwa-btn-install" onclick="installPwaApp()">Install App</button>
+    </div>
+  </div>
+
+  <!-- PWA Install Logic -->
+  <script>
+    let deferredPrompt;
+
+    // 1. Catch the browser's hidden install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent Chrome from showing the default mini-infobar
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      deferredPrompt = e;
+      
+      // Check if we should show our custom popup
+      checkAndShowPwaPopup();
+    });
+
+    function checkAndShowPwaPopup() {
+      // If the user is ALREADY using the installed app, do nothing
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        return;
+      }
+
+      const lastDismissed = localStorage.getItem('prasx_pwa_dismissed_time');
+      const now = Date.now();
+      const hours48 = 48 * 60 * 60 * 1000; // 48 hours in milliseconds
+
+      // If never shown, or 48 hours have passed since last click
+      if (!lastDismissed || (now - parseInt(lastDismissed)) > hours48) {
+        // Wait 3 seconds after page loads so it doesn't interrupt the preloader
+        setTimeout(() => {
+          document.getElementById('pwaInstallPopup').classList.add('show');
+        }, 3000);
+      }
+    }
+
+    function closePwaPopup() {
+      // Hide popup
+      document.getElementById('pwaInstallPopup').classList.remove('show');
+      // Save current time to local storage
+      localStorage.setItem('prasx_pwa_dismissed_time', Date.now());
+    }
+
+    async function installPwaApp() {
+      if (deferredPrompt) {
+        // Show the browser's native install prompt
+        deferredPrompt.prompt();
+        
+        // Wait for the user to respond to the prompt
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          console.log('User installed the PWA');
+        }
+        
+        // We've used the prompt, and can't use it again, throw it away
+        deferredPrompt = null;
+      }
+      // Hide popup and reset 48-hour timer
+      closePwaPopup();
+    }
+
+    // Optional: If they install it via browser menu instead of our button, hide the popup
+    window.addEventListener('appinstalled', () => {
+      document.getElementById('pwaInstallPopup').classList.remove('show');
+      localStorage.setItem('prasx_pwa_dismissed_time', Date.now());
+      deferredPrompt = null;
+    });
+  </script>
