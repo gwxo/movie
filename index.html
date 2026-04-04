@@ -13743,46 +13743,32 @@ document.addEventListener('DOMContentLoaded', function() {
     let deferredPrompt;
 
     // 1. Catch the browser's hidden install prompt
+    // This event ONLY fires if the user HAS NOT installed the app yet.
     window.addEventListener('beforeinstallprompt', (e) => {
       // Prevent Chrome from showing the default mini-infobar
       e.preventDefault();
       // Stash the event so it can be triggered later.
       deferredPrompt = e;
       
-      // Show the install button in the sidebar since it's supported
+      // 👉 INTEGRATION: Show the "Install App" button in the sidebar
       const sidebarBtn = document.getElementById('installPwaSidebarBtn');
       if (sidebarBtn) sidebarBtn.style.display = 'flex';
 
-      // Check if we should show our custom popup
-      checkAndShowPwaPopup();
+      // Wait 3 seconds so the preloader animation can finish, then show popup
+      setTimeout(() => {
+        // Double check they aren't already running the app in standalone mode
+        if (!window.matchMedia('(display-mode: standalone)').matches) {
+          const popup = document.getElementById('pwaInstallPopup');
+          if (popup) popup.classList.add('show');
+        }
+      }, 3000);
     });
 
-    function checkAndShowPwaPopup() {
-      // If the user is ALREADY using the installed app, do nothing
-      if (window.matchMedia('(display-mode: standalone)').matches) {
-        return;
-      }
-
-      const lastDismissed = localStorage.getItem('prasx_pwa_dismissed_time');
-      const now = Date.now();
-      const hours48 = 48 * 60 * 60 * 1000; // 48 hours in milliseconds
-
-      // If never shown, or 48 hours have passed since last click
-      if (!lastDismissed || (now - parseInt(lastDismissed)) > hours48) {
-        // Wait 3 seconds after page loads so it doesn't interrupt the preloader
-        setTimeout(() => {
-          const popup = document.getElementById('pwaInstallPopup');
-          if(popup) popup.classList.add('show');
-        }, 3000);
-      }
-    }
-
     function closePwaPopup() {
-      // Hide popup
+      // Hide popup. Because there is NO local storage saved, 
+      // if they refresh the page, it will pop up again.
       const popup = document.getElementById('pwaInstallPopup');
-      if(popup) popup.classList.remove('show');
-      // Save current time to local storage
-      localStorage.setItem('prasx_pwa_dismissed_time', Date.now());
+      if (popup) popup.classList.remove('show');
     }
 
     async function installPwaApp() {
@@ -13794,7 +13780,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
           console.log('User installed the PWA');
-          // Hide sidebar button on successful install
+          
+          // 👉 INTEGRATION: Hide the sidebar button because it's now installed
           const sidebarBtn = document.getElementById('installPwaSidebarBtn');
           if (sidebarBtn) sidebarBtn.style.display = 'none';
         }
@@ -13802,19 +13789,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // We've used the prompt, and can't use it again, throw it away
         deferredPrompt = null;
       }
-      // Hide popup and reset 48-hour timer
+      // Hide popup
       closePwaPopup();
     }
 
-    // Hide everything if installed via browser menu instead of our button
+    // If the user successfully installs the app via browser menu or our buttons
     window.addEventListener('appinstalled', () => {
       const popup = document.getElementById('pwaInstallPopup');
-      if(popup) popup.classList.remove('show');
+      if (popup) popup.classList.remove('show');
       
+      // 👉 INTEGRATION: Hide the sidebar button
       const sidebarBtn = document.getElementById('installPwaSidebarBtn');
       if (sidebarBtn) sidebarBtn.style.display = 'none';
 
-      localStorage.setItem('prasx_pwa_dismissed_time', Date.now());
       deferredPrompt = null;
     });
   </script>
