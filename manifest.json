@@ -1,10 +1,10 @@
 {
   "name": "PrasxMovie",
-  "short_name": "PrasX",
+  "short_name": "PrasXmovie",
   "description": "Premium Movie & TV Streaming",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
+  "background_color": "#D21F3C",
   "theme_color": "#e50914",
   "orientation": "any",
   "icons": [
